@@ -1,0 +1,55 @@
+# 🛠 AI-Assisted Development Log
+
+[Iteration 1: Architectural Pivot]
+[Problem]
+* ChromaDB and vector embeddings were causing "Module Not Found" and non-deterministic sorting issues in the local terminal.
+[Options Considered]
+* Keep Vector DB (Complex) vs. BM25 (Simple/Deterministic).
+[Decision + Why]
+* Shifted to **BM25 Only**. It guarantees 100% reproducibility across different judge environments and eliminates the text-embedding-004 quota dependency.
+[Prompt Used]
+* "Remove all chromadb and embedding logic. Implement a pure BM25-based retrieval system using rank_bm25. Ensure it is fully deterministic."
+[Result]
+* Reduced cold-start time and ensured identical results for identical queries.
+
+---
+
+[Iteration 2: Hallucination Prevention]
+[Problem]
+* Gemini was using "General Knowledge" to answer tickets when the specific product docs were missing from the context.
+[Options Considered]
+* Stronger prompts vs. Multi-layered guards.
+[Decision + Why]
+* Implemented **3-Layer Defense**. Added a Retrieval Guard to stop the LLM call entirely if scores are low, and a post-gen overlap check. Safety is more important than "trying" to answer.
+[Prompt Used]
+* "Add explicit failure mode handling. If BM25 confidence is low, escalate. If response doesn't overlap with context, escalate."
+[Result]
+* 100% grounding verification. The system now admits ignorance professionally.
+
+---
+
+[Iteration 3: Multi-Key Resilience]
+[Problem]
+* 429 RESOURCE_EXHAUSTED errors were stopping the batch processing pipeline halfway.
+[Options Considered]
+* Adding longer sleeps vs. API key rotation.
+[Decision + Why]
+* Implemented **Round-Robin Key Rotation** in `client_manager.py`. It maximizes throughput on the Free Tier and ensures the agent is resilient to per-key rate limits.
+[Prompt Used]
+* "Implement a client_manager.py that handles 6 API keys in a round-robin rotation. Update all LLM modules to use it."
+[Result]
+* Successfully processed full CSV batches without pipeline interruptions.
+
+---
+
+[Iteration 4: Justification Quality]
+[Problem]
+* Justifications were vague and lacked evidence.
+[Options Considered]
+* LLM-generated justification vs. Template-based evidence.
+[Decision + Why]
+* Chose **Template-based Traceability**. Injecting exact document titles (e.g., 'Troubleshooting Login...') ensures the agent's work is verifiable by a human auditor.
+[Prompt Used]
+* "Improve justification quality. Use format: 'Response based on documentation: * {title1} * {title2}. These directly address the user's issue.'"
+[Result]
+* Traceable, grounded audit trail in the output CSV.

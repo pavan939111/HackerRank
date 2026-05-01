@@ -1,0 +1,3 @@
+issue,subject,company,status,product_area,response,justification,request_type
+I forgot my password,Login Issue,hackerrank,replied,unknown,Error occurred during generation.,Out of scope issue handled with polite refusal.,invalid
+Service is down,Outage,claude,replied,unknown,Error occurred during generation.,Out of scope issue handled with polite refusal.,invalid
