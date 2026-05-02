@@ -31,3 +31,9 @@ data/index/
 data/embeddings/
 *.sqlite
 *.db
+
+data/raw/
+data/scraped/
+data/chroma_store/
+data/bm25_indexes.pkl
+data/visited_urls.json
