@@ -1,58 +1,68 @@
-# 🎨 DESIGN.md — Prompt Engineering Evolution
+# 🎨 DESIGN.md — System Architecture
 
-This document tracks the iterative improvement of the prompts used in the Support Triage Agent, demonstrating the shift from naive generation to strict, grounded reasoning.
+This document provides a technical overview of the Support Triage Agent's architecture and module responsibilities.
 
 ---
 
-## 🕒 Version 1: Naive Generation
-**Prompt Strategy**: Direct question answering.
-```text
-Subject: {subject}
-Issue: {issue}
-Context: {context}
+## 🏗️ System Architecture
 
-Answer the user's issue based on the context.
+```mermaid
+graph TD
+    subgraph Input
+        A[CSV Tickets]
+    end
+
+    subgraph Orchestrator [agent.py]
+        B[Classification & Risk]
+        C[BM25 Retrieval]
+        D[LLM Re-ranking]
+        E[Response Generation]
+        F[Post-Gen Validation]
+    end
+
+    subgraph Knowledge Base
+        G[(processed_chunks.json)]
+    end
+
+    subgraph Safety Guards
+        H[Retrieval Guard]
+        I[Lexical Overlap Check]
+    end
+
+    A --> B
+    B --> C
+    C <--> G
+    C --> D
+    D --> E
+    E --> F
+    F --> H
+    F --> I
+    I --> J[Final Output CSV]
 ```
-**Issues Identified**:
-- **Hallucination**: The model would invent URLs or phone numbers if they weren't in the context.
-- **Tone Inconsistency**: Sometimes too casual, sometimes overly verbose.
-- **Output Format**: Frequently returned plain text instead of the required JSON schema, breaking the CSV pipeline.
 
 ---
 
-## 📈 Version 2: Grounded & Structured
-**Prompt Strategy**: Added negative constraints and JSON schema enforcement.
-```text
-System: Answer ONLY using the provided context chunks. If the answer is not found, say you don't know. Return JSON ONLY.
+## 🧩 Module Responsibilities
 
-Context: {context}
-...
-```
-**Improvements**:
-- **Grounding**: Significantly reduced hallucination by explicitly forbidding external knowledge.
-- **Reliability**: JSON schema usage made the pipeline more stable.
-**Remaining Issues**:
-- **Ambiguity**: The model would sometimes "guess" an escalation when a valid answer existed in a lower-ranked chunk.
-- **Traceability**: Justifications were generic and didn't explain *which* part of the documentation was used.
+### Core Logic
+*   **`main.py`**: The entry point. Handles CSV loading, batch iteration, and final output writing.
+*   **`agent.py`**: The orchestrator. Coordinates the flow between classification, retrieval, and generation. Implements the decision matrix for `reply` vs `escalate`.
+*   **`client_manager.py`**: Resilience layer. Manages a pool of 6 API keys with round-robin rotation and exponential backoff to handle rate limits.
 
----
-
-## 🚀 Version 3: Strict, Deterministic & Traceable (Current)
-**Prompt Strategy**: Multi-layered constraints, Evidence-based Justification, and Forced Status.
-```text
-System: You are a support agent for {company}. 
-- Never invent policies or steps.
-- Keep response under 200 words.
-- Instruction: You MUST generate a response where status is "{forced_status}".
-
-Justification Rule: List document titles used for the answer.
-```
-**Improvements**:
-- **Strict Determinism**: By passing a `forced_status` decided by the `agent.py` logic, we ensure the LLM never conflicts with the system's safety-first decision engine.
-- **High Auditability**: The justification field now acts as a "Proof of Context," listing exact document titles (e.g., 'Troubleshooting Login Issues...') which ensures judges can verify the grounding instantly.
-- **Failure Resilience**: Prompt now includes specific instructions for "No Reliable Context" scenarios, ensuring the model provides a professional hand-off instead of a broken reply.
+### Specialized Components
+*   **`classifier.py`**: Uses Gemini to determine `product_area`, `request_type`, and `should_escalate` in a single unified call.
+*   **`retriever.py`**: Implements BM25 retrieval over the local corpus. Includes a semantic re-ranking step where Gemini picks the best chunks from the top 10 candidates.
+*   **`generator.py`**: Produces grounded responses based on the provided context. Enforces strict determinism (`temperature=0`).
+*   **`escalation.py`**: A fast-path keyword pre-check for immediate high-risk detection.
+*   **`validate.py`**: An audit tool that checks schema compliance and computes accuracy against sample datasets.
 
 ---
 
-## 🧠 Conclusion
-The prompt evolution reflects a shift from **LLM-as-a-Creator** to **LLM-as-a-Reasoner**. By constraining the model's creative freedom and forcing it to cite its sources, we achieved the high accuracy and explainability required for production support triage.
+## 🔄 Data Flow Explanation
+
+1.  **Ingestion**: Tickets are read and normalized (lowercase, stripped).
+2.  **Intent & Risk**: The classifier determines if the ticket is a valid support request and if it carries high-risk implications (fraud, account access).
+3.  **Context Discovery**: The retriever searches the processed knowledge base. It uses a **Company Boost** to ensure that HackerRank tickets only retrieve HackerRank documentation.
+4.  **Triage Decision**: The agent reviews the risk level and the confidence of the retrieved documentation. If no reliable documentation exists for a valid request, it defaults to **Escalation**.
+5.  **Grounded Response**: For documented issues, a response is generated using **ONLY** the retrieved chunks.
+6.  **Audit**: Every response is validated for lexical overlap with the source chunks before being finalized.
