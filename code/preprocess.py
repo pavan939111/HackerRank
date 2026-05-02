@@ -46,14 +46,16 @@ def parse_markdown_file(file_path: Path):
         print(f"Error reading {file_path}: {e}")
         return {}, ""
 
-def chunk_text(text: str, size: int = 400, overlap: int = 50) -> list[str]:
-    words = text.split()
+def chunk_text(text: str, size: int = 1000, overlap: int = 100) -> list[str]:
+    """
+    Character-based chunking for consistency with character-level retrieval heuristics.
+    """
     chunks = []
     i = 0
-    while i < len(words):
-        chunk = " ".join(words[i:i+size])
+    while i < len(text):
+        chunk = text[i:i+size]
         chunks.append(chunk)
-        if i + size >= len(words):
+        if i + size >= len(text):
             break
         i += size - overlap
     return chunks
@@ -67,7 +69,7 @@ def main():
         print(f"Data directory not found at {data_dir}!")
         return
         
-    print("Starting preprocessing pipeline...")
+    print("Starting preprocessing pipeline (Character-based Chunking)...")
     processed_chunks = []
     
     # Recursively load ALL files
@@ -81,7 +83,8 @@ def main():
         if not content:
             continue
             
-        chunks = chunk_text(content, size=400, overlap=50)
+        # Character-based chunking: ~1000 chars with 100 char overlap
+        chunks = chunk_text(content, size=1000, overlap=100)
         
         for chunk in chunks:
             processed_chunks.append({

@@ -52,7 +52,7 @@ Instruction: You MUST generate a response where status is "{forced_status}".
         try:
             client = get_client()
             response = client.models.generate_content(
-                model="gemini-flash-latest",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -68,8 +68,9 @@ Instruction: You MUST generate a response where status is "{forced_status}".
                 return {
                     "status": forced_status,
                     "product_area": classification.get("product_area", "unknown"),
-                    "response": "Error occurred during generation.",
+                    "response": "Error occurred during generation. Safe fallback triggered.",
                     "justification": str(e),
                     "request_type": "invalid"
                 }
-            time.sleep(1)
+            # Exponential backoff: 1s, 2s, 4s...
+            time.sleep(2 ** attempt)

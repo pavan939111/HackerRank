@@ -86,8 +86,8 @@ def main():
                 "request_type": "invalid"
             })
         
-        # Respect rate limits to mitigate quota issues
-        time.sleep(3.0)
+        # Small buffer to avoid burst limits
+        time.sleep(0.1)
         
     # 8. Final integrity check: Assert length parity
     if len(results) != total_rows:

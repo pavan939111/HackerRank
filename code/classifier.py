@@ -35,7 +35,7 @@ If out-of-scope (celebrity names, general trivia, non-support topics): set reque
         try:
             client = get_client()
             response = client.models.generate_content(
-                model="gemini-flash-latest",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -53,4 +53,5 @@ If out-of-scope (celebrity names, general trivia, non-support topics): set reque
                     "escalation_reason": str(e),
                     "product_area": "unknown"
                 }
-            time.sleep(0.5)
+            # Exponential backoff: 1s, 2s, 4s...
+            time.sleep(2 ** attempt)

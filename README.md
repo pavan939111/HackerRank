@@ -26,13 +26,14 @@ graph TD
     H --> I[Final Output CSV]
 ```
 
-1.  **Risk Detection**: Fast-path keyword check + LLM reasoning for high-risk topics (fraud, legal, outages).
-2.  **Classification**: Categorizes the ticket into a `product_area` and `request_type`.
-3.  **Retrieval (BM25)**: Keyword-based search over a pre-processed knowledge corpus.
-4.  **LLM Re-ranking**: Gemini reviews the top 10 BM25 candidates to select the 3 most contextually relevant chunks.
-5.  **Generation (Gemini)**: Generates a response grounded strictly in the selected chunks.
-6.  **Validation**: Post-generation check for lexical overlap and refusal phrases to prevent hallucinations.
-7.  **Output**: Results are written to CSV with traceable justifications.
+1.  **Ticket Input**: Reads the batch CSV data using Pandas.
+2.  **Classification & Risk**: Uses a single LLM call to categorize the ticket and assess escalation risk simultaneously.
+3.  **Fast-Path Escalation**: Supplements LLM reasoning with a keyword-based pre-check for immediate high-risk detection.
+4.  **Retrieval (BM25)**: Keyword-based search over a pre-processed knowledge corpus.
+5.  **LLM Re-ranking**: Gemini reviews the top 10 BM25 candidates to select the 3 most contextually relevant chunks.
+6.  **Generation (Gemini)**: Generates a response grounded strictly in the selected chunks.
+7.  **Validation**: Post-generation check for lexical overlap and refusal phrases to prevent hallucinations.
+8.  **Output**: Results are written to CSV with traceable justifications.
 
 ---
 
