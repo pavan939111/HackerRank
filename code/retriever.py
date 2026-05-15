@@ -1,94 +1,110 @@
-import json
 import os
+import json
 import time
 from pathlib import Path
-from rank_bm25 import BM25Okapi
-from google.genai import types
-from client_manager import get_client, KEYS
+from llama_index.core import StorageContext, load_index_from_storage, Settings
+from llama_index.core.retrievers import QueryFusionRetriever
+from llama_index.retrievers.bm25 import BM25Retriever
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 
-# Global variables for caching the index
-_bm25_index = None
-_all_chunks = None
+from config import TOP_K, FINAL_K, MIN_SCORE
 
-def load_data():
-    global _bm25_index, _all_chunks
-    if _bm25_index is not None:
-        return _bm25_index, _all_chunks
+# Architecture Constraint: No LLM for retrieval fusion
+Settings.llm = None
+
+# Global variable for index cache
+_index = None
+
+def load_index():
+    global _index
+    if _index is not None:
+        return _index
         
     base_dir = Path(__file__).resolve().parent.parent
-    data_file = base_dir / "data" / "processed_chunks.json"
+    storage_dir = base_dir / "code" / "storage"
     
-    if not data_file.exists():
-        raise FileNotFoundError(f"Processed chunks not found at {data_file}. Run preprocess.py first.")
+    if not storage_dir.exists():
+        raise FileNotFoundError(f"Storage directory not found at {storage_dir}. Run preprocess.py first.")
         
-    with open(data_file, "r", encoding="utf-8") as f:
-        _all_chunks = json.load(f)
-        
-    # Tokenize for BM25
-    tokenized_corpus = [c["text"].lower().split() for c in _all_chunks]
-    _bm25_index = BM25Okapi(tokenized_corpus)
-    return _bm25_index, _all_chunks
+    # Use local embedding model for semantic retrieval
+    embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+    Settings.embed_model = embed_model
+    
+    storage_context = StorageContext.from_defaults(persist_dir=str(storage_dir))
+    _index = load_index_from_storage(storage_context)
+    return _index
 
-def retrieve(query: str, company: str, top_k: int = 3) -> dict:
-    bm25, chunks = load_data()
+def retrieve(query: str, company: str, top_k: int = TOP_K) -> dict:
+    """
+    HYBRID RETRIEVAL ENGINE (BM25 + Semantic Similarity)
+    Implements Score Fusion with Deterministic Safety Controls.
+    """
+    index = load_index()
     
-    tokenized_query = query.lower().split()
-    scores = bm25.get_scores(tokenized_query)
+    # 1. Company-Aware Metadata Filtering
+    filters = MetadataFilters(filters=[
+        ExactMatchFilter(key="company", value=company.lower())
+    ])
     
-    # 1. Company-based Score Boosting (+1000.0)
-    for i, chunk in enumerate(chunks):
-        if chunk["company"].lower() == company.lower():
-            scores[i] += 1000.0
+    # 2. Hybrid Components
+    # BM25 (Keyword Precision)
+    bm25_retriever = BM25Retriever.from_defaults(
+        index=index, 
+        similarity_top_k=top_k,
+        filters=filters
+    )
+    
+    # Vector (Semantic Intent - Semantic Similarity)
+    vector_retriever = index.as_retriever(
+        similarity_top_k=top_k,
+        filters=filters
+    )
+    
+    # 3. Hybrid Score Fusion (Reciprocal Rerank)
+    # Using 1 query to maintain determinism
+    retriever = QueryFusionRetriever(
+        [bm25_retriever, vector_retriever],
+        similarity_top_k=top_k,
+        num_queries=1,
+        mode="reciprocal_rerank",
+        use_async=False
+    )
+    
+    nodes_with_scores = retriever.retrieve(query)
+    
+    # 4. Confidence Gating & Logging
+    print(f"\n⚡ [HYBRID RETRIEVAL] Query: '{query}' | Target: {company}")
+    final_chunks = []
+    
+    for node_with_score in nodes_with_scores:
+        score = node_with_score.score
+        
+        # Deterministic Safety Check
+        if score < MIN_SCORE:
+            print(f"  ❌ Filtered (Low Rank): {node_with_score.node.metadata.get('title')} [{score:.4f}]")
+            continue
             
-    # 2. Get top 10 candidates for LLM re-ranking
-    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
-    candidates = [chunks[i] for i in top_indices]
+        node = node_with_score.node
+        final_chunks.append({
+            "text": node.get_content(),
+            "company": node.metadata.get("company", ""),
+            "title": node.metadata.get("title", "Untitled"),
+            "url": node.metadata.get("url", ""),
+            "score": score
+        })
+        print(f"  ✅ Accepted: {node.metadata.get('title')} [Score: {score:.4f}]")
     
-    # 3. Confidence Metrics (Strictly BM25-based)
-    top_score = scores[top_indices[0]] - (1000.0 if chunks[top_indices[0]]["company"].lower() == company.lower() else 0)
-    avg_top_5 = sum(scores[top_indices[:5]]) / 5
-    avg_top_5_unboosted = avg_top_5 - 1000.0 # Conservative
+    # Limit to Top K
+    final_chunks = final_chunks[:FINAL_K]
     
-    # Confidence Heuristic
-    confidence = "high"
-    if top_score < 1.0 or avg_top_5_unboosted < 0.5:
-        confidence = "low"
-        
-    # 4. LLM Re-ranking (Semantic Filter)
-    system_prompt = """You are a retrieval assistant. Select the indices of the MOST RELEVANT chunks for the user issue.
-Return JSON ONLY: {"top_indices": [index1, index2, index3]}
-Indices correspond to the candidate list (0-9).
-"""
-    prompt = f"User Issue: {query}\n\nCandidates:\n"
-    for i, c in enumerate(candidates):
-        prompt += f"[{i}] (Title: {c['title']}) {c['text'][:200]}...\n"
-
-    final_chunks = candidates[:top_k] # Default fallback
+    # 5. Hybrid Confidence Calculation
+    top_score = nodes_with_scores[0].score if nodes_with_scores else 0.0
+    confidence = "high" if final_chunks and top_score >= MIN_SCORE else "low"
     
-    num_retries = len(KEYS)
-    for attempt in range(num_retries):
-        try:
-            client = get_client()
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=0.0,
-                    response_mime_type="application/json"
-                )
-            )
-            data = json.loads(response.text)
-            llm_indices = data.get("top_indices", [])
-            final_chunks = [candidates[i] for i in llm_indices if i < len(candidates)][:top_k]
-            break
-        except Exception:
-            if attempt == num_retries - 1:
-                break
-            time.sleep(2 ** attempt)
-
     return {
         "chunks": final_chunks,
         "confidence": confidence,
-        "top_score": top_score
+        "top_score": top_score,
+        "method": "hybrid_reciprocal_rerank"
     }

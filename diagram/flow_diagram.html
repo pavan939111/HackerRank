@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Flow - AI Triage Agent</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --accent: #00f2ff;
+            --purple: #bc13fe;
+            --text: #e0e0e0;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .flow-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .step:hover { border-color: var(--accent); transform: translateX(10px); }
+        .number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            min-width: 40px;
+        }
+        .content h3 { font-size: 1.1rem; color: #fff; margin-bottom: 4px; }
+        .content p { font-size: 0.85rem; color: #999; }
+        .arrow {
+            text-align: center;
+            color: var(--border);
+            font-size: 1.5rem;
+            margin: -5px 0;
+        }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2rem; color: var(--accent); letter-spacing: 2px; }
+        .header p { color: var(--purple); font-weight: 700; text-transform: uppercase; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <div class="flow-container">
+        <div class="header">
+            <p>HackerRank Orchestrate 2026</p>
+            <h1>PIPELINE FLOW</h1>
+        </div>
+
+        <div class="step">
+            <div class="number">01</div>
+            <div class="content">
+                <h3>Ingestion</h3>
+                <p>Load support tickets from CSV and normalize company metadata.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">02</div>
+            <div class="content">
+                <h3>Classification</h3>
+                <p>LLM identifies request type (Bug/Feature/Issue) and urgency risk.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">03</div>
+            <div class="content">
+                <h3>Hybrid Retrieval</h3>
+                <p>BM25 + Vector Search fetches grounded context from support docs.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">04</div>
+            <div class="content">
+                <h3>Constraint Check</h3>
+                <p>Assess context quality; decide between direct reply or human escalation.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">05</div>
+            <div class="content">
+                <h3>Generation</h3>
+                <p>LLM synthesizes response based ONLY on retrieved knowledge base.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">06</div>
+            <div class="content">
+                <h3>Safety Validation</h3>
+                <p>Final lexical overlap check to prevent hallucinations and vague replies.</p>
+            </div>
+        </div>
+        <div class="arrow">↓</div>
+
+        <div class="step">
+            <div class="number">07</div>
+            <div class="content">
+                <h3>Structured Output</h3>
+                <p>Persist final JSON result to CSV with internal justifications.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

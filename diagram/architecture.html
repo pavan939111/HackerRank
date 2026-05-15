@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI System Architecture - Multi-Domain Triage</title>
+    <style>
+        :root {
+            --bg: #0b0e14;
+            --panel: rgba(17, 25, 40, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --cyan: #00d2ff;
+            --purple: #9d50bb;
+            --green: #00f260;
+            --amber: #f2994a;
+            --text: #e2e8f0;
+            --text-dim: #94a3b8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 95vw;
+            max-width: 1200px;
+            padding: 40px;
+            background: var(--panel);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h1 { font-size: 1.5rem; letter-spacing: 2px; color: var(--cyan); margin-bottom: 10px; }
+        .tagline { font-size: 2rem; font-weight: 800; color: #fff; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        .column-label {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .box-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; color: var(--cyan); }
+        .box-sub { font-size: 0.75rem; color: var(--text-dim); line-height: 1.4; }
+        .badge {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--purple);
+            font-weight: 800;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SYSTEM ARCHITECTURE</h1>
+            <div class="tagline">Multi-Domain AI Triage Agent</div>
+        </header>
+        <div class="grid">
+            <div>
+                <div class="column-label">Ingestion</div>
+                <div class="box">
+                    <div class="box-title">main.py</div>
+                    <div class="box-sub">CSV Ingestion & Loop Orchestration</div>
+                </div>
+                <div class="box">
+                    <div class="box-title">preprocess.py</div>
+                    <div class="box-sub">Hybrid Indexing (BM25 + Vector)</div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label">Logic</div>
+                <div class="box">
+                    <div class="badge">Gemini LLM</div>
+                    <div class="box-title">classifier.py</div>
+                    <div class="box-sub">Intent & Risk Classification</div>
+                </div>
+                <div class="box">
+                    <div class="box-title">agent.py</div>
+                    <div class="box-sub">State Machine & Decision Engine</div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label">Retrieval</div>
+                <div class="box">
+                    <div class="box-title">retriever.py</div>
+                    <div class="box-sub">Hybrid Knowledge Retrieval (BM25 + Semantic)</div>
+                </div>
+                <div class="box">
+                    <div class="badge">Gemini LLM</div>
+                    <div class="box-title">generator.py</div>
+                    <div class="box-sub">Grounded Context-Bound Generation</div>
+                </div>
+            </div>
+            <div>
+                <div class="column-label">Safety</div>
+                <div class="box">
+                    <div class="box-title">validate.py</div>
+                    <div class="box-sub">Hallucination & Lexical Validation</div>
+                </div>
+                <div class="box">
+                    <div class="box-title">output.csv</div>
+                    <div class="box-sub">Final Structured Result Storage</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div>Stack: Python | LlamaIndex | Gemini | BM25</div>
+            <div>Built for HackerRank Orchestrate 2026</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,94 +1,66 @@
-import pandas as pd
-import os
-from pathlib import Path
+import re
+from config import MIN_OVERLAP, VAGUE_PHRASES, REFUSAL_PHRASE
 
-def validate():
-    base_dir = Path(__file__).resolve().parent.parent
-    output_path = base_dir / "support_tickets" / "output.csv"
-    expected_path = base_dir / "support_tickets" / "sample_support_tickets.csv"
-    
-    if not output_path.exists():
-        print(f"Error: {output_path} not found.")
-        return
+def is_context_valid(chunks: list[dict]) -> bool:
+    """
+    Checks if the retrieved context is sufficient for generating a response.
+    """
+    if not chunks:
+        print("[VALIDATION] Context check failed: No chunks retrieved.")
+        return False
         
-    print(f"--- Validating {output_path.name} ---")
-    df_out = pd.read_csv(output_path)
-    
-    # 1. Schema Validation
-    required_cols = ["issue", "subject", "company", "status", "product_area", "response", "justification", "request_type"]
-    missing = set(required_cols) - set(df_out.columns)
-    if missing:
-        print(f"SCHEMA ERROR: Missing columns {missing}")
-    else:
-        print("SCHEMA: OK")
-        
-    # 2. Accuracy Validation (against expected results)
-    if expected_path.exists():
-        print(f"\n--- Comparing against {expected_path.name} ---")
-        df_exp = pd.read_csv(expected_path)
-        
-        # Normalize columns for comparison
-        df_out.columns = df_out.columns.str.strip().str.lower()
-        df_exp.columns = df_exp.columns.str.strip().str.lower()
-        
-        # Clean data for better matching
-        df_out['subject'] = df_out['subject'].astype(str).str.strip().str.lower()
-        df_exp['subject'] = df_exp['subject'].astype(str).str.strip().str.lower()
-        df_out['issue'] = df_out['issue'].astype(str).str.strip().str.lower()
-        df_exp['issue'] = df_exp['issue'].astype(str).str.strip().str.lower()
-        
-        total = 0
-        correct_status = 0
-        correct_type = 0
-        correct_area = 0
-        
-        mismatches = []
-        
-        for _, row_out in df_out.iterrows():
-            # Try to match by subject first, then by issue if subject is empty
-            if row_out['subject'] and row_out['subject'] != 'nan':
-                match = df_exp[df_exp['subject'] == row_out['subject']]
-            else:
-                # Match by first 100 chars of issue
-                match = df_exp[df_exp['issue'].str.contains(row_out['issue'][:100], na=False, regex=False)]
-                
-            if not match.empty:
-                row_exp = match.iloc[0]
-                total += 1
-                
-                s_match = str(row_out['status']).lower() == str(row_exp['status']).lower()
-                t_match = str(row_out['request_type']).lower() == str(row_exp['request_type']).lower()
-                a_match = str(row_out['product_area']).lower() == str(row_exp['product_area']).lower()
-                
-                if s_match: correct_status += 1
-                if t_match: correct_type += 1
-                if a_match: correct_area += 1
-                
-                if not (s_match and t_match):
-                    mismatches.append({
-                        "subject": row_out['subject'],
-                        "exp_status": row_exp['status'],
-                        "out_status": row_out['status'],
-                        "exp_type": row_exp['request_type'],
-                        "out_type": row_out['request_type']
-                    })
-        
-        if total > 0:
-            print(f"Total Matches Found: {total}")
-            print(f"Status Accuracy: {correct_status/total:.2%}")
-            print(f"Request Type Accuracy: {correct_type/total:.2%}")
-            print(f"Product Area Accuracy: {correct_area/total:.2%}")
+    # Rules:
+    # 1. No empty chunks
+    # 2. Sufficient text length (> 100 chars for at least one chunk)
+    # 3. All chunks must have content
+    has_strong_chunk = False
+    for chunk in chunks:
+        text = chunk.get("text", "").strip()
+        if not text:
+            print("[VALIDATION] Context check failed: Found empty chunk.")
+            return False
+        if len(text) > 100:
+            has_strong_chunk = True
             
-            if mismatches:
-                print("\n--- TOP MISMATCHES ---")
-                for m in mismatches[:5]:
-                    print(f"Subject: {m['subject']}")
-                    print(f"  Expected: {m['exp_status']} | {m['exp_type']}")
-                    print(f"  Got:      {m['out_status']} | {m['out_type']}")
-        else:
-            print("No matching rows found between output and expected CSV for accuracy check.")
-    else:
-        print(f"Expected results file not found at {expected_path}. Skipping accuracy check.")
+    if not has_strong_chunk:
+        print("[VALIDATION] Context check failed: No chunks with sufficient length (>100 chars).")
+        return False
+        
+    return True
 
-if __name__ == "__main__":
-    validate()
+def validate_response(response: str, chunks: list[dict]) -> tuple[bool, str]:
+    """
+    Validates the generated response for grounding and clarity.
+    Returns (is_valid, reason)
+    """
+    if not response:
+        return False, "Empty response"
+        
+    if REFUSAL_PHRASE.lower() in response.lower():
+        return True, "Handled refusal"
+
+    # 1. Check for vague phrases
+    found_vague = [p for p in VAGUE_PHRASES if p in response.lower()]
+    if found_vague:
+        return False, f"Response contains vague language: {found_vague}"
+
+    # 2. Check for lexical overlap (Grounding)
+    res_words = set(re.findall(r'\w+', response.lower()))
+    ctx_text = " ".join([c.get("text", "") for c in chunks]).lower()
+    ctx_words = set(re.findall(r'\w+', ctx_text))
+    
+    # Filter common stop words
+    stop_words = {"the", "a", "an", "and", "or", "to", "of", "in", "is", "at", "it", "with", "for", "on"}
+    res_words = res_words - stop_words
+    ctx_words = ctx_words - stop_words
+    
+    if not res_words:
+        return True, "No meaningful content to validate"
+        
+    overlap = res_words.intersection(ctx_words)
+    overlap_ratio = len(overlap) / len(res_words) if res_words else 0
+    
+    if overlap_ratio < MIN_OVERLAP:
+        return False, f"Low context overlap ({overlap_ratio:.2f} < {MIN_OVERLAP})"
+        
+    return True, "Validation successful"

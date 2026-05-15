@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise AI Workflow - Support Triage Agent</title>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --header-blue: #e0f2fe;
+            --stage-green: #f0fdf4;
+            --proc-orange: #fff7ed;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-dim: #64748b;
+            --accent-blue: #0ea5e9;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .workflow-container {
+            width: 100%;
+            max-width: 1300px;
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 20px;
+        }
+
+        /* 1. INPUT LAYER */
+        .input-layer {
+            grid-row: 1 / span 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #fff;
+            border: 2px dashed var(--border);
+            border-radius: 20px;
+        }
+        .input-title { font-weight: 800; font-size: 0.8rem; margin-bottom: 15px; color: var(--text-dim); text-transform: uppercase; }
+        .input-box {
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 15px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .input-box h4 { font-size: 0.9rem; margin-bottom: 5px; }
+        .input-fields { font-size: 0.75rem; color: var(--text-dim); }
+
+        /* 2. FRAMEWORK LAYER */
+        .framework-layer {
+            background: var(--header-blue);
+            border: 1px solid #bae6fd;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .layer-label { font-weight: 800; font-size: 0.7rem; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 1px; }
+        .framework-item { background: #fff; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; border: 1px solid #bae6fd; }
+
+        /* 3. STAGES LAYER */
+        .stages-layer {
+            background: var(--stage-green);
+            border: 1px solid #dcfce7;
+            border-radius: 20px;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            position: relative;
+        }
+        .stage-box {
+            background: #fff;
+            border: 1px solid #bbf7d0;
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        }
+        .stage-num { font-size: 0.65rem; font-weight: 800; color: var(--accent-green); opacity: 0.5; }
+        .stage-file { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--text-dim); }
+        .stage-title { font-size: 0.85rem; font-weight: 700; }
+        .stage-desc { font-size: 0.7rem; color: var(--text-dim); line-height: 1.3; }
+        .stage-api { font-size: 0.65rem; font-weight: 800; color: #9d50bb; margin-top: auto; }
+
+        /* 4. PROCESSING LAYER */
+        .processing-layer {
+            background: var(--proc-orange);
+            border: 1px solid #ffedd5;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+        }
+        .proc-label { font-weight: 800; font-size: 0.7rem; color: var(--accent-orange); text-transform: uppercase; }
+        .proc-flow { display: flex; align-items: center; gap: 15px; }
+        .proc-item { background: #fff; padding: 10px 15px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; border: 1px solid #fed7aa; }
+        .arrow { color: #fed7aa; font-weight: 800; }
+
+        /* ARROWS / CONNECTIONS */
+        .connection-arrow {
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #bbf7d0;
+            font-weight: 800;
+        }
+
+        /* OUTPUT SECTION */
+        .output-section {
+            grid-column: 2;
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 10px;
+        }
+        .output-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        .output-label { font-size: 0.75rem; font-weight: 700; color: var(--accent-orange); }
+        .output-csv { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600; }
+
+        .footer-tag {
+            grid-column: 1 / span 2;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="workflow-container">
+        <!-- 1. INPUT LAYER -->
+        <div class="input-layer">
+            <div class="input-title">Input Stream</div>
+            <div class="input-box">
+                <h4>Support Tickets</h4>
+                <p class="input-fields">issue | subject | company</p>
+                <p style="font-size: 0.6rem; color: #94a3b8; margin-top: 10px;">Format: CSV</p>
+            </div>
+        </div>
+
+        <!-- 2. FRAMEWORK LAYER -->
+        <div class="framework-layer">
+            <div class="layer-label">Orchestration Layer</div>
+            <div class="framework-item">Pipeline Engine</div>
+            <div class="framework-item">TicketContext</div>
+            <div class="framework-item">Observability (logs.txt)</div>
+            <div class="framework-item">System Config</div>
+        </div>
+
+        <!-- 3. STAGES LAYER -->
+        <div class="stages-layer">
+            <!-- Stage 1 -->
+            <div class="stage-box">
+                <div class="stage-num">01</div>
+                <div class="stage-file">escalation.py</div>
+                <div class="stage-title">Safety Filter</div>
+                <div class="stage-desc">Fraud & outage detection. High-risk triggers.</div>
+            </div>
+            <!-- Stage 2 -->
+            <div class="stage-box">
+                <div class="stage-num">02</div>
+                <div class="stage-file">classifier.py</div>
+                <div class="stage-title">Classification</div>
+                <div class="stage-desc">Intent mapping & urgency scoring.</div>
+                <div class="stage-api">Gemini Flash</div>
+            </div>
+            <!-- Stage 3 -->
+            <div class="stage-box">
+                <div class="stage-num">03</div>
+                <div class="stage-file">retriever.py</div>
+                <div class="stage-title">Hybrid Retrieval</div>
+                <div class="stage-desc">BM25 + Semantic Similarity with score fusion.</div>
+            </div>
+            <!-- Stage 4 -->
+            <div class="stage-box">
+                <div class="stage-num">04</div>
+                <div class="stage-file">validate.py</div>
+                <div class="stage-title">Context Validation</div>
+                <div class="stage-desc">Hallucination prevention & confidence check.</div>
+            </div>
+            <!-- Stage 5 -->
+            <div class="stage-box">
+                <div class="stage-num">05</div>
+                <div class="stage-file">generator.py</div>
+                <div class="stage-title">Generation</div>
+                <div class="stage-desc">Grounded response synthesis.</div>
+                <div class="stage-api">Gemini Flash API</div>
+            </div>
+            <!-- Stage 6 -->
+            <div class="stage-box">
+                <div class="stage-num">06</div>
+                <div class="stage-file">agent.py</div>
+                <div class="stage-title">Decision Engine</div>
+                <div class="stage-desc">Final arbitration: Reply vs. Human Escalation.</div>
+            </div>
+        </div>
+
+        <!-- 4. DOCUMENT PROCESSING LAYER -->
+        <div class="processing-layer">
+            <div class="proc-label">Document Ingestion Pipeline</div>
+            <div class="proc-flow">
+                <div class="proc-item">Markdown Docs</div>
+                <div class="arrow">→</div>
+                <div class="proc-item" style="border-color: var(--accent-orange);">Docling Parser</div>
+                <div class="arrow">→</div>
+                <div class="proc-item">Structured Chunks</div>
+                <div class="arrow">→</div>
+                <div class="proc-item">BM25 Index</div>
+            </div>
+        </div>
+
+        <!-- OUTPUT -->
+        <div class="output-section">
+            <div class="output-box">
+                <span class="output-label">Final Assembly</span>
+                <span class="output-csv">output.csv</span>
+            </div>
+        </div>
+
+        <div class="footer-tag">
+            “A safe, modular, Hybrid Retrieval system using structured document parsing and deterministic safety controls.”
+        </div>
+    </div>
+</body>
+</html>

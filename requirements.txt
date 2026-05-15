@@ -1,0 +1,11 @@
+llama-index
+llama-index-retrievers-bm25
+llama-index-embeddings-huggingface
+llama-index-readers-file
+sentence-transformers
+rank-bm25
+google-genai
+pyyaml
+pandas
+docling
+numpy
