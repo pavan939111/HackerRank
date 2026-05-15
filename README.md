@@ -1,33 +1,67 @@
 # Multi-Domain AI Support Triage Agent
-## Hybrid Retrieval + Safety-First Decision Engine
+### 🚀 Hybrid Retrieval • Docling Structured Data • Safety-First Architecture
 
-A production-oriented AI agent built to process support tickets across multiple domains (HackerRank, Claude, Visa). The system leverages **Hybrid Retrieval** (BM25 + Semantic Similarity) and **Deterministic Safety Controls** to ensure grounded, high-accuracy responses.
+![Hero Image](diagram/hero_image.png)
 
-### 🚀 Key Features
-- **Hybrid Retrieval**: Combines keyword precision (BM25) with semantic intent (Embeddings) for robust knowledge retrieval.
-- **Docling-Inspired Parsing**: Structured document ingestion that preserves hierarchy and metadata.
-- **7-Stage Sequential Pipeline**: A modular architecture that separates safety, classification, retrieval, and validation.
-- **Hallucination Prevention**: Integrated lexical overlap validation and vague-phrase detection.
-- **No Vector DB Complexity**: Efficient in-memory similarity search and local index persistence.
-
-### 🏗️ System Architecture
-The system follows a strict sequential flow:
-1. **Safety Layer**: Immediate detection of high-risk fraud or system outages.
-2. **Classification**: Intent mapping and domain detection via Gemini 1.5 Flash.
-3. **Hybrid Retrieval**: Score-fused retrieval across structured documents.
-4. **Context Validation**: Safety checks for context quality and relevance.
-5. **Generation**: Grounded response synthesis.
-6. **Decision Engine**: Final arbitration: Reply vs. Human Escalation.
-7. **Output Assembly**: Structured CSV persistence.
-
-### 🛠️ Why Hybrid Retrieval?
-Pure BM25 can miss nuanced semantic matches, while pure semantic search can be "fuzzy" and miss specific error codes. Our **Hybrid Engine** ensures:
-- **Precision**: Exact terminology match via BM25.
-- **Recall**: Semantic intent match via Embedding similarity.
-- **Stability**: Deterministic score fusion (Reciprocal Rerank).
-
-### 🛡️ Safety Controls
-The system is built on an **Escalation-First** philosophy. If retrieval confidence is low or validation fails, the system automatically escalates to a human agent rather than risking an unverified answer.
+## 📖 Overview
+The **Multi-Domain AI Support Triage Agent** is a production-grade engineering system designed to automate complex support ticket triage across diverse corporate domains (HackerRank, Claude, Visa). Unlike standard RAG systems, this agent utilizes a **7-Stage Sequential Pipeline** that prioritizes deterministic safety, grounded generation, and explainable decision-making.
 
 ---
-*Built for HackerRank Orchestrate 2026*
+
+## 🏗️ System Architecture
+The system is built on a modular orchestration layer that separates ingestion, processing, and validation.
+
+![Architecture Diagram](diagram/architecture_diagram.png)
+
+### The 7-Stage Pipeline:
+1.  **Safety Layer (`escalation.py`)**: Immediate detection of high-risk fraud or system outages using keyword-based triggers.
+2.  **Classification Layer (`classifier.py`)**: Intent mapping and domain detection via **Gemini 1.5 Flash** with deterministic settings.
+3.  **Hybrid Retrieval Layer (`retriever.py`)**: Combines **BM25 Keyword Precision** with **Semantic Intent Similarity** for robust context retrieval.
+4.  **Context Validation (`validate.py`)**: Proactive safety checks to ensure retrieved context is sufficient and relevant.
+5.  **Response Generation (`generator.py`)**: Grounded response synthesis constrained strictly to the retrieved documentation.
+6.  **Decision Engine (`agent.py`)**: Final arbitration logic—automatically escalates to a human agent if confidence is low or validation fails.
+7.  **Output Assembly**: Persists structured results to `output.csv` with full justifications for every action.
+
+---
+
+## 🛠️ Technical Pillars
+
+### 1. Hybrid Retrieval Engine
+By fusing **BM25** (for exact error codes and product names) with **BGE Embeddings** (for semantic intent), the agent achieves high recall without sacrificing precision. All retrieval is performed locally without external Vector DB dependencies.
+
+### 2. Docling-Inspired Structured Parsing
+Our ingestion pipeline uses a structured parser to transform raw Markdown into machine-readable sections, preserving document hierarchy, tables, and metadata for high-fidelity retrieval.
+
+### 3. Hallucination Prevention
+Every generated response undergoes a **Lexical Overlap Validation**. If the grounding ratio between the response and the source documentation falls below the threshold, the system triggers an automatic escalation override.
+
+---
+
+## 🚀 Getting Started
+
+### Installation
+```bash
+pip install -r requirements.txt
+```
+
+### Document Ingestion
+Build the hybrid index and structured chunk repository:
+```bash
+python code/preprocess.py
+```
+
+### Running the Agent
+Process tickets from the input CSV:
+```bash
+python code/main.py
+```
+
+---
+
+## 🛡️ Safety & Compliance
+- **Escalation-First**: Safe refusal is preferred over unverified information.
+- **Traceability**: Every decision includes an internal `justification` field.
+- **Data Isolation**: Metadata filters ensure cross-domain data leaks are impossible.
+
+---
+**Built for HackerRank Orchestrate 2026**
